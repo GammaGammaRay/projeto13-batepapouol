@@ -5,6 +5,10 @@
 
 # Ignore folder
 .ignore
+data
+
+# env
+.env
 
 # Logs
 logs
