@@ -24,7 +24,8 @@ try {
     console.log(chalk.bold.red(err.message));
 }
 
-const db = mongoClient.db('batepapouol');
+// const db = mongoClient.db('batepapouol');
+const db = mongoClient.db();
 
 app.get("/", (req, res) => {
     res.send("Bate-papo UOL");
@@ -121,7 +122,7 @@ app.post('/messages', async (req, res) => {
         })
 
         return res.sendStatus(201);
-        
+
     }catch(err) {
         console.log(chalk.bold.red(err.message));
         return res.status(500).send('Internal Server Error');
@@ -131,8 +132,10 @@ app.post('/messages', async (req, res) => {
 });
 
 app.get('/messages', async (req, res) => {
+    let user = req.headers.user;
+    
     try{
-        const messages = await db.collection('messages').find().toArray();
+        const messages = await db.collection('messages').find({ $or: [{ to: user }, { to: 'Todos' }] }).toArray();
         res.status(200).send(messages);
     }catch{
         res.status(500).send(err.message);
