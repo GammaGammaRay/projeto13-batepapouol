@@ -66,12 +66,12 @@ app.post('/participants', async (req, res) => {
         } else {
             await db.collection('participants').insertOne({
                 name: stripHtml(name.toString()).result.trim(),
-                lastStatus: Date.now()
+                lastStatus: getCurrentTimestamp()
             });
 
             // console.log('Inserted user:', {
             //     name: stripHtml(name.toString()).result.trim(),
-            //     lastStatus: Date.now()
+            //     lastStatus: getCurrentTimestamp()
             // });
 
             await db.collection('messages').insertOne({
@@ -79,7 +79,7 @@ app.post('/participants', async (req, res) => {
                 to: 'Todos',
                 text: 'entra na sala...',
                 type: 'status',
-                time: dayjs().format('HH:mm:ss')
+                time: getCurrentTimestampFormatted()
             });
             
             return res.sendStatus(201);
@@ -126,7 +126,7 @@ app.post('/messages', async (req, res) => {
             to: stripHtml(to.toString()).result.trim(),
             text: stripHtml(text.toString()).result.trim(),
             type: stripHtml(type.toString()).result.trim(),
-            time: dayjs().format('HH:mm:ss')
+            time: getCurrentTimestampFormatted()
         });
 
         return res.sendStatus(201);
@@ -173,44 +173,50 @@ app.get('/messages', async (req, res) => {
 // });
 
 // --------- STATUS UPDATE ---------
-app.post('/status', async (req, res) => {
+app.post("/status", async (req, res) => {
     const user = req.headers.user;
-    if(!user) return res.sendStatus(404);
-
-    const existingUser = await db.collection('participants').findOne({ user });
-    if(!existingUser) return res.sendStatus(404);
-    
+    if (!user) return res.sendStatus(404);
+  
+    const existingUser = await db.collection("participants").findOne({ user });
+    if (!existingUser) return res.sendStatus(404);
+  
     try {
-        await db
-          .collection("participants")
-          .updateOne(user, { $set: { lastStatus: Date.now() } });
-        res.sendStatus(200);
-      } catch (err) {
-        res.status(500).send(err.message);
-      }
-
-});
+      const currentTimestamp = getCurrentTimestamp(); // Get the current timestamp
+      await db
+        .collection("participants")
+        .updateOne(existingUser, { $set: { lastStatus: currentTimestamp } });
+      res.sendStatus(200);
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
 
 // --------- REMOVE INACTIVE USERS ---------
 setInterval(async () => {
-    try{
-        const inactives = await db.collection("participants").find({
-            lastStatus: { $lt: Date.now() - 10000 }
-        }).toArray();
-
-        inactives.forEach(async (inactiveUser) => {
-            db.collection('messages').insertOne({
-                from: inactiveUser.name,
-                to: 'Todos',
-                text: 'sai da sala...',
-                type: 'status',
-                time: dayjs().format('HH:mm:ss'),
-            });
+    try {
+      const currentTimestamp = getCurrentTimestamp(); 
+      const inactives = await db
+        .collection("participants")
+        .find({ lastStatus: { $lt: currentTimestamp - 10000 } })
+        .toArray();
+  
+      inactives.forEach(async (inactiveUser) => {
+        db.collection("messages").insertOne({
+          from: inactiveUser.name,
+          to: "Todos",
+          text: "sai da sala...",
+          type: "status",
+          time: getCurrentTimestampFormatted(),
         });
-    }catch(err) {
-        console.log(err.message);
+      });
+    } catch (err) {
+      console.log(err.message);
     }
-}, 15000);
+  }, 15000);
+
+  const getCurrentTimestamp = () => dayjs().unix();
+
+const getCurrentTimestampFormatted = () => dayjs().format("HH:mm:ss");
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(chalk.bold.green(`Server running on ${PORT}`)));
