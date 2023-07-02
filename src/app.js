@@ -45,7 +45,7 @@ const schema_user = joi.object({
 
 // --------- PARTICIPANTS ---------
 app.post('/participants', async (req, res) => {
-    let { name } = req.body;
+    const { name } = req.body;
 
     const validation = schema_user.validate(req.body, { abortEarly: false });
 
@@ -101,8 +101,8 @@ app.get('/participants', async (req, res) => {
 
 // --------- MESSAGES ---------
 app.post('/messages', async (req, res) => {
-    let { to, text, type } = req.body;
-    let from = req.headers.user;
+    const { to, text, type } = req.body;
+    const from = req.headers.user;
 
     const validation = schema_message.validate(req.body, { abortEarly: false });
 
@@ -111,7 +111,7 @@ app.post('/messages', async (req, res) => {
         return res.status(422).send(validationErrors);
     }
 
-    if(!from || !db.collection('participants').find(from)) {
+    if(!from || !db.collection('participants').findOne(from)) {
         return res.status(422).send(validationErrors);
     }
 
@@ -135,7 +135,13 @@ app.post('/messages', async (req, res) => {
 });
 
 app.get('/messages', async (req, res) => {
-    let user = req.headers.user;
+    const user = req.headers.user;
+    const { limit } = req.query;
+
+    if(limit) {
+        if(isNaN(limit) || parseInt(limit) <= 0) return res.status(422).send('Limit query param is not valid');
+    }
+
 
     if(user === "admin") {
         try{
@@ -148,6 +154,7 @@ app.get('/messages', async (req, res) => {
     
     try{
         const messages = await db.collection('messages').find({ $or: [{ to: user }, { to: 'Todos' }, { from: user }] }).toArray();
+        
         res.status(200).send(messages);
     }catch{
         res.status(500).send(err.message);
