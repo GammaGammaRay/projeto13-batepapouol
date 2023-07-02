@@ -112,20 +112,20 @@ app.post('/messages', async (req, res) => {
     }
 
     if (!from) {
-        return res.status(422).send('From field is required');
+        return res.status(422).send('"From/User" field is required');
     }
 
     const participant = await db.collection('participants').findOne({ name: from });
     if (!participant) {
-        return res.status(422).send('Participant does not exist');
+        return res.status(422).send('User not found');
     }
 
     try {
         await db.collection('messages').insertOne({
-            from,
-            to,
+            from: stripHtml(from.toString()).result.trim(),
+            to: stripHtml(to.toString()).result.trim(),
             text: stripHtml(text.toString()).result.trim(),
-            type,
+            type: stripHtml(type.toString()).result.trim(),
             time: dayjs().format('HH:mm:ss')
         });
 
@@ -193,7 +193,19 @@ app.post('/status', async (req, res) => {
 // --------- REMOVE INACTIVE USERS ---------
 setInterval(async () => {
     try{
+        const inactives = await db.collection("participants").find({
+            lastStatus: { $lt: Date.now() - 10000 }
+        }).toArray();
 
+        inactives.forEach(async (inactiveUser) => {
+            db.collection('messages').insertOne({
+                from: inactiveUser.name,
+                to: 'Todos',
+                text: 'sai da sala...',
+                type: 'status',
+                time: dayjs().format('HH:mm:ss'),
+            });
+        });
     }catch(err) {
         console.log(err.message);
     }
