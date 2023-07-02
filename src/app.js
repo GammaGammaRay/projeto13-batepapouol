@@ -112,7 +112,7 @@ app.post('/messages', async (req, res) => {
     }
 
     if(!from || !db.collection('participants').findOne(from)) {
-        return res.status(422).send(validationErrors);
+        return res.status(422);
     }
 
     try{
@@ -139,7 +139,7 @@ app.get('/messages', async (req, res) => {
     const { limit } = req.query;
 
     if(limit) {
-        if(isNaN(limit) || parseInt(limit) <= 0) return res.status(422).send('Limit query param is not valid');
+        if(isNaN(limit) || parseInt(limit) <= 0) return res.status(422).send('Message limit query value is not valid');
     }
 
 
@@ -161,18 +161,40 @@ app.get('/messages', async (req, res) => {
     }
 });
 
-app.put('/messages:id', async (req, res) => {
+// app.put('/messages:id', async (req, res) => {
     
-});
+// });
 
-app.delete('/messages:id', async (req, res) => {
+// app.delete('/messages:id', async (req, res) => {
     
-});
+// });
 
-// --------- STATUS ---------
+// --------- STATUS UPDATE ---------
 app.post('/status', async (req, res) => {
+    const user = req.headers.user;
+    const existingParticipant = await db.collection('participants').findOne({ user });
+
+    if(!user || !existingParticipant) return res.sendStatus(404);
+    
+    try {
+        await db
+          .collection("participants")
+          .updateOne(user, { $set: { lastStatus: Date.now() } });
+        res.sendStatus(200);
+      } catch (err) {
+        res.status(500).send(err.message);
+      }
 
 });
+
+// --------- REMOVE INACTIVE USERS ---------
+setInterval(async () => {
+    try{
+
+    }catch(err) {
+        console.log(err.message);
+    }
+}, 15000);
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(chalk.bold.green(`Server running on ${PORT}`)));
