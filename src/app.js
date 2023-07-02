@@ -111,28 +111,31 @@ app.post('/messages', async (req, res) => {
         return res.status(422).send(validationErrors);
     }
 
-    if(!from || !db.collection('participants').findOne(from)) {
-        return res.status(422);
+    if (!from) {
+        return res.status(422).send('From field is required');
     }
 
-    try{
+    const participant = await db.collection('participants').findOne({ name: from });
+    if (!participant) {
+        return res.status(422).send('Participant does not exist');
+    }
+
+    try {
         await db.collection('messages').insertOne({
             from,
             to,
             text: stripHtml(text.toString()).result.trim(),
             type,
             time: dayjs().format('HH:mm:ss')
-        })
+        });
 
         return res.sendStatus(201);
-
-    }catch(err) {
+    } catch (err) {
         console.log(chalk.bold.red(err.message));
         return res.status(500).send('Internal Server Error');
     }
-
-
 });
+
 
 app.get('/messages', async (req, res) => {
     const user = req.headers.user;
