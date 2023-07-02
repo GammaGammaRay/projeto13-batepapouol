@@ -175,9 +175,10 @@ app.get('/messages', async (req, res) => {
 // --------- STATUS UPDATE ---------
 app.post('/status', async (req, res) => {
     const user = req.headers.user;
-    const existingParticipant = await db.collection('participants').findOne({ user });
+    if(!user) return res.sendStatus(404);
 
-    if(!user || !existingParticipant) return res.sendStatus(404);
+    const existingUser = await db.collection('participants').findOne({ user });
+    if(!existingUser) return res.sendStatus(404);
     
     try {
         await db
