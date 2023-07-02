@@ -10,11 +10,11 @@ import nodemon from "nodemon";
 
 const app = express();
 app.use(express.json());
-app.use(cors);
+app.use(cors());
 dotenv.config();
 
 
-// ----------------- MONGO INIT -----------------
+// --------- MONGO INIT ---------
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 
 try {
@@ -26,35 +26,44 @@ try {
 
 const db = mongoClient.db();
 
-// ----------------- JOI SCHEMAS -----------------
-const schemaUser = joi.object({
-    name: joi.string().required(),
+app.get("/", (req, res) => {
+    res.send("Bate-papo UOL");
+  });
+
+// --------- JOI SCHEMAS ---------
+const schema_user = joi.object({
+    name: joi.string().min(1).required(),
   });
   
-  const schemaMessage = joi.object({
+  const schema_message = joi.object({
     to: joi.string().min(1).required(),
     text: joi.string().min(1).required(),
     type: joi.any().valid('message', 'private_message').required(),
   });
 
-// ----------------- PARTICIPANTS -----------------
+// --------- PARTICIPANTS ---------
 app.post('/participants', async (req, res) => {
     let { username } = req.body;
 
+    const validation = schema_user.validate(req.body, { abortEarly: false });
 
+    if(validation.error) {
+        return res.status(422).send(validation.error);
+    }
+    
 
 })
 
 app.get('/participants', async (req, res) => {
     try{
-        const participants = await db.collection("participants").find().toArray();
-        res.send(participants);
+        const participants = await db.collection('participants').find().toArray();
+        res.status(200).send(participants);
     }catch{
         res.status(500).send(err.message);
     }
 })
 
-// ----------------- MESSAGES -----------------
+// --------- MESSAGES ---------
 app.post('/messages', async (req, res) => {
     
 })
@@ -71,7 +80,7 @@ app.delete('/messages:id', async (req, res) => {
     
 })
 
-// ----------------- STATUS -----------------
+// --------- STATUS ---------
 app.post('/status', async (req, res) => {
 
 })
