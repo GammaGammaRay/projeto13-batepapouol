@@ -24,7 +24,7 @@ try {
     console.log(chalk.bold.red(err.message));
 }
 
-const db = mongoClient.db();
+const db = mongoClient.db('batepapouol');
 
 app.get("/", (req, res) => {
     res.send("Bate-papo UOL");
@@ -43,16 +43,49 @@ const schema_user = joi.object({
 
 // --------- PARTICIPANTS ---------
 app.post('/participants', async (req, res) => {
-    let { username } = req.body;
+    let { name } = req.body;
 
     const validation = schema_user.validate(req.body, { abortEarly: false });
 
-    if(validation.error) {
-        return res.status(422).send(validation.error);
+    if (validation.error) {
+        const validationErrors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(validationErrors);
     }
-    
 
-})
+    if (!name) {
+        return res.status(422).send('Username is required');
+    }
+
+    try {
+        const existingParticipant = await db.collection('participants').findOne({ name });
+        if (existingParticipant) {
+            console.log(chalk.bgMagentaBright('Username taken'));
+            return res.status(409).send('Username taken');
+        } else {
+            name = stripHtml(name.toString()).result.trim();
+            await db.collection('participants').insertOne({
+                name,
+                lastStatus: Date.now()
+            });
+            console.log('Inserted document:', {
+                name: stripHtml(name.toString()).result.trim(),
+                lastStatus: Date.now()
+            });
+            await db.collection('messages').insertOne({
+                from: name,
+                to: "Todos",
+                text: "entra na sala...",
+                type: "status",
+                time: dayjs().format("HH:mm:ss")
+            });
+            
+            return res.sendStatus(201);
+        }
+    } catch (err) {
+        console.log(chalk.bold.red(err.message));
+        return res.status(500).send('Internal Server Error');
+    }
+});
 
 app.get('/participants', async (req, res) => {
     try{
