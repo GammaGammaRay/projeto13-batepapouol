@@ -36,6 +36,7 @@ const schema_user = joi.object({
   });
   
   const schema_message = joi.object({
+    // from: joi.string().required(),
     to: joi.string().min(1).required(),
     text: joi.string().min(1).required(),
     type: joi.any().valid('message', 'private_message').required(),
@@ -67,16 +68,18 @@ app.post('/participants', async (req, res) => {
                 name,
                 lastStatus: Date.now()
             });
-            console.log('Inserted document:', {
-                name: stripHtml(name.toString()).result.trim(),
-                lastStatus: Date.now()
-            });
+
+            // console.log('Inserted user:', {
+            //     name: stripHtml(name.toString()).result.trim(),
+            //     lastStatus: Date.now()
+            // });
+
             await db.collection('messages').insertOne({
-                from: name,
-                to: "Todos",
-                text: "entra na sala...",
-                type: "status",
-                time: dayjs().format("HH:mm:ss")
+                from,
+                to,
+                text: stripHtml(text).result.trim(),
+                type,
+                time: dayjs().format('HH:mm:ss')
             });
             
             return res.sendStatus(201);
@@ -94,29 +97,60 @@ app.get('/participants', async (req, res) => {
     }catch{
         res.status(500).send(err.message);
     }
-})
+});
 
 // --------- MESSAGES ---------
 app.post('/messages', async (req, res) => {
-    
-})
+    let { to, text, type } = req.body;
+    let from = req.headers.user;
+
+    const validation = schema_message.validate(req.body, { abortEarly: false });
+
+    if (validation.error) {
+        const validationErrors = validation.error.details.map((detail) => detail.message);
+        return res.status(422).send(validationErrors);
+    }
+
+    try{
+        await db.collection('messages').insertOne({
+            from,
+            to,
+            text,
+            type,
+            time: dayjs().format('HH:mm:ss')
+        })
+
+        return res.sendStatus(201);
+        
+    }catch(err) {
+        console.log(chalk.bold.red(err.message));
+        return res.status(500).send('Internal Server Error');
+    }
+
+
+});
 
 app.get('/messages', async (req, res) => {
-    
-})
+    try{
+        const messages = await db.collection('messages').find().toArray();
+        res.status(200).send(messages);
+    }catch{
+        res.status(500).send(err.message);
+    }
+});
 
 app.put('/messages:id', async (req, res) => {
     
-})
+});
 
 app.delete('/messages:id', async (req, res) => {
     
-})
+});
 
 // --------- STATUS ---------
 app.post('/status', async (req, res) => {
 
-})
+});
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(chalk.bold.green(`Server running on ${PORT}`)));
