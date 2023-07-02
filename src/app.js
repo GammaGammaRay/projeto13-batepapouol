@@ -76,10 +76,10 @@ app.post('/participants', async (req, res) => {
             // });
 
             await db.collection('messages').insertOne({
-                from,
-                to,
-                text: stripHtml(text).result.trim(),
-                type,
+                from: name,
+                to: 'Todos',
+                text: 'entra na sala...',
+                type: 'status',
                 time: dayjs().format('HH:mm:ss')
             });
             
@@ -94,9 +94,9 @@ app.post('/participants', async (req, res) => {
 app.get('/participants', async (req, res) => {
     try{
         const participants = await db.collection('participants').find().toArray();
-        res.status(200).send(participants);
+        return res.status(200).send(participants);
     }catch{
-        res.status(500).send(err.message);
+        return res.status(500).send(err.message);
     }
 });
 
@@ -133,9 +133,18 @@ app.post('/messages', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     let user = req.headers.user;
+
+    if(user === "admin") {
+        try{
+            const messages = await db.collection('messages').find().toArray();
+            return res.status(200).send(messages);
+        }catch{
+            return res.status(500).send(err.message);
+        }
+    }
     
     try{
-        const messages = await db.collection('messages').find({ $or: [{ to: user }, { to: 'Todos' }] }).toArray();
+        const messages = await db.collection('messages').find({ $or: [{ to: user }, { to: 'Todos' }, { from: user }] }).toArray();
         res.status(200).send(messages);
     }catch{
         res.status(500).send(err.message);
