@@ -64,9 +64,8 @@ app.post('/participants', async (req, res) => {
             console.log(chalk.bgMagentaBright('Username taken'));
             return res.status(409).send('Username taken');
         } else {
-            name = stripHtml(name.toString()).result.trim();
             await db.collection('participants').insertOne({
-                name,
+                name: stripHtml(name.toString()).result.trim(),
                 lastStatus: Date.now()
             });
 
@@ -112,11 +111,15 @@ app.post('/messages', async (req, res) => {
         return res.status(422).send(validationErrors);
     }
 
+    if(!from || !db.collection('participants').find(from)) {
+        return res.status(422).send(validationErrors);
+    }
+
     try{
         await db.collection('messages').insertOne({
             from,
             to,
-            text,
+            text: stripHtml(text.toString()).result.trim(),
             type,
             time: dayjs().format('HH:mm:ss')
         })
