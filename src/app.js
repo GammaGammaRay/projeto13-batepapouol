@@ -165,20 +165,20 @@ app.get('/messages', async (req, res) => {
 
 // app.delete('/messages:id', async (req, res) => {
     
-// });
+// });u
 
 // --------- STATUS POST ---------
 app.post("/status", async (req, res) => {
     const user = req.headers.user;
     if (!user) return res.status(404).send("User header field required");
   
-    const existingUser = await db.collection("participants").findOne({ user });
+    const existingUser = await db.collection("participants").findOne({ name: stripHtml(user).result.trim() });
     if (!existingUser) return res.status(404).send("User not registered");
   
     try {
       await db
         .collection("participants")
-        .updateOne(existingUser, { $set: { lastStatus: getCurrentTimestamp() } });
+        .updateOne(existingUser, { $set: { lastStatus: Date.now() } });
       res.sendStatus(200);
     } catch (err) {
       res.status(500).send(err.message);
@@ -189,12 +189,12 @@ app.post("/status", async (req, res) => {
 setInterval(async () => {
     try {
       const currentTimestamp = getCurrentTimestamp(); 
-      const inactives = await db
+      const inactiveUserList = await db
         .collection("participants")
         .find({ lastStatus: { $lt: currentTimestamp - 10000 } })
         .toArray();
   
-      inactives.forEach(async (inactiveUser) => {
+        inactiveUserList.forEach(async (inactiveUser) => {
         db.collection("messages").insertOne({
           from: inactiveUser.name,
           to: "Todos",
@@ -202,6 +202,7 @@ setInterval(async () => {
           type: "status",
           time: getCurrentTimestampFormatted(),
         });
+        db.collection("participants").deleteOne({ _id: participant._id });
       });
     } catch (err) {
       console.log(err.message);
