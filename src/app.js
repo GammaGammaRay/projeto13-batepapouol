@@ -134,30 +134,54 @@ app.get('/messages', async (req, res) => {
     const user = req.headers.user;
     const { limit } = req.query;
 
-    if(limit) {
-        if(isNaN(limit) || parseInt(limit) <= 0) return res.status(422).send('Query value for get/message limit is not valid (NaN or smaller than/equal to zero)');
+    if (limit) {
+        const validation = schemaLimit.validate(limit);
+        if (validation.error) {
+            const errors = validation.error.details.map((detail) => detail.message);
+            return res.status(422).send(errors);
+        }
     }
 
+    if (user === "admin") {
+        try {
+            if (limit !== undefined) {
+                const messages = await db
+                    .collection("messages")
+                    .find()
+                    .sort({ $natural: -1 })
+                    .limit(Number(limit))
+                    .toArray();
+                return res.status(200).send(messages);
+            }
 
-    if(user === "admin") {
-        try{
-            const messages = await db.collection('messages').find().toArray();
+            const messages = await db.collection("messages").find().toArray();
             return res.status(200).send(messages);
-        }catch{
+        } catch (err) {
             return res.status(500).send(err.message);
         }
     }
-    
-    try{
-        const messages = await db.collection('messages')
-        .find({ $or: [{ to: user }, { to: 'Todos' }, { from: user }] })
-        .toArray();
-        
+
+    try {
+        if (limit !== undefined) {
+            const messages = await db
+                .collection("messages")
+                .find({ $or: [{ to: user }, { to: 'Todos' }, { from: user }] })
+                .sort({ $natural: -1 })
+                .limit(Number(limit))
+                .toArray();
+            return res.status(200).send(messages);
+        }
+
+        const messages = await db
+            .collection("messages")
+            .find({ $or: [{ to: user }, { to: 'Todos' }, { from: user }] })
+            .toArray();
         res.status(200).send(messages);
-    }catch{
+    } catch (err) {
         res.status(500).send(err.message);
     }
 });
+
 
 // app.put('/messages:id', async (req, res) => {
     
